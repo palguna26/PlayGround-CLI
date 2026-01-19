@@ -18,7 +18,9 @@ PlayGround is developer infrastructure, not a product UI. It's an open runtime f
 
 - Go 1.19 or later
 - Git
-- OpenAI API key (for AI features)
+- API key for either:
+  - **OpenAI** (GPT-4, GPT-3.5)
+  - **Google Gemini** (Gemini 2.0 Flash, Gemini Pro)
 
 ### Build from source
 
@@ -40,11 +42,29 @@ sudo mv pg /usr/local/bin/
 
 ## Setup
 
-Set your OpenAI API key:
+### Option 1: Use Gemini (Recommended)
 
 ```bash
-export OPENAI_API_KEY="sk-abcdef1234567890abcdef1234567890abcdef12"
+export GEMINI_API_KEY="your-gemini-api-key-here"
 ```
+
+### Option 2: Use OpenAI
+
+```bash
+export OPENAI_API_KEY="your-openai-api-key-here"
+```
+
+### Option 3: Explicit Provider Selection
+
+If you have both API keys and want to choose:
+
+```bash
+export LLM_PROVIDER="gemini"  # or "openai"
+export GEMINI_API_KEY="your-gemini-key"
+export OPENAI_API_KEY="your-openai-key"
+```
+
+**Auto-Detection**: If both API keys are set without `LLM_PROVIDER`, PlayGround will prefer Gemini.
 
 ## Usage
 
@@ -114,7 +134,7 @@ playground/
 │   ├── session/      # Session persistence
 │   ├── tools/        # Agent tools (read, list, git, run, propose_patch)
 │   ├── patch/        # Patch validation & application
-│   ├── llm/          # LLM provider abstraction (OpenAI)
+│   ├── llm/          # LLM provider abstraction (OpenAI, Gemini)
 │   └── agent/        # Agent runtime & loop
 └── go.mod
 ```
@@ -240,8 +260,19 @@ The active session is tracked in `.pg/active`.
 **"no active session"**  
 → Start a session with `pg start "<goal>"`.
 
-**"OPENAI_API_KEY environment variable not set"**  
-→ Set your API key: `export OPENAI_API_KEY="sk-..."`
+**"no LLM API key found"**  
+→ Set either `GEMINI_API_KEY` or `OPENAI_API_KEY`:
+```bash
+export GEMINI_API_KEY="your-key"
+# OR
+export OPENAI_API_KEY="your-key"
+```
+
+**Want to switch providers?**  
+→ Use `LLM_PROVIDER` environment variable:
+```bash
+export LLM_PROVIDER="gemini"  # or "openai"
+```
 
 **Patch application failed**  
 → File may have changed since patch was proposed. Check `git status` and regenerate patches.
