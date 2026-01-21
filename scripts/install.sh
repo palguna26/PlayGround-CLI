@@ -113,8 +113,13 @@ download_and_install() {
     VERSION="$3"
     INSTALL_DIR="$4"
     
-    # Construct download URL
-    ARCHIVE_NAME="${BINARY_NAME}_${OS}_${ARCH}.tar.gz"
+    # Windows uses .zip, others use .tar.gz
+    if [ "$OS" = "windows" ]; then
+        ARCHIVE_NAME="${BINARY_NAME}_${OS}_${ARCH}.zip"
+    else
+        ARCHIVE_NAME="${BINARY_NAME}_${OS}_${ARCH}.tar.gz"
+    fi
+    
     DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ARCHIVE_NAME}"
     CHECKSUM_URL="https://github.com/${REPO}/releases/download/${VERSION}/checksums.txt"
     
@@ -126,7 +131,7 @@ download_and_install() {
     
     # Download archive
     if ! curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/$ARCHIVE_NAME"; then
-        error "Failed to download $DOWNLOAD_URL"
+        error "Failed to download $DOWNLOAD_URL\n\nCheck: https://github.com/${REPO}/releases/tag/${VERSION}"
     fi
     
     # Download and verify checksum
@@ -157,7 +162,19 @@ download_and_install() {
     
     # Extract archive
     info "Extracting..."
-    tar -xzf "$TMP_DIR/$ARCHIVE_NAME" -C "$TMP_DIR"
+    if [ "$OS" = "windows" ]; then
+        # Use unzip for Windows .zip files
+        if command -v unzip >/dev/null 2>&1; then
+            unzip -q "$TMP_DIR/$ARCHIVE_NAME" -d "$TMP_DIR"
+        else
+            # Fallback: try with tar (some versions support zip)
+            cd "$TMP_DIR" && tar -xf "$ARCHIVE_NAME" 2>/dev/null || {
+                error "unzip is required to extract Windows archive. Install it with: apt install unzip"
+            }
+        fi
+    else
+        tar -xzf "$TMP_DIR/$ARCHIVE_NAME" -C "$TMP_DIR"
+    fi
     
     # Find the binary (might be in root or in a subdirectory)
     if [ -f "$TMP_DIR/$BINARY_NAME" ]; then
