@@ -72,12 +72,16 @@ detect_arch() {
 
 # Get latest release version from GitHub
 get_latest_version() {
-    VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | 
-              grep '"tag_name":' | 
-              sed -E 's/.*"([^"]+)".*/\1/')
+    RELEASE_URL="https://api.github.com/repos/${REPO}/releases/latest"
+    
+    RESPONSE=$(curl -fsSL "$RELEASE_URL" 2>/dev/null) || {
+        error "Failed to fetch releases from GitHub.\n\nPossible causes:\n  - No releases exist yet (check GitHub Actions)\n  - Network connectivity issue\n  - Rate limited by GitHub API\n\nCheck: https://github.com/${REPO}/releases"
+    }
+    
+    VERSION=$(echo "$RESPONSE" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     
     if [ -z "$VERSION" ]; then
-        error "Failed to fetch latest version from GitHub"
+        error "No releases found.\n\nThe release workflow may still be running.\nCheck: https://github.com/${REPO}/actions"
     fi
     echo "$VERSION"
 }
