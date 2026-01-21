@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -30,11 +31,34 @@ func NewProvider() (Provider, error) {
 
 // autoDetectProvider automatically detects which provider to use based on API keys
 func autoDetectProvider() (Provider, error) {
+	// Check environment variables first
 	hasOpenAI := os.Getenv("OPENAI_API_KEY") != ""
 	hasGemini := os.Getenv("GEMINI_API_KEY") != ""
 
+	// If not in env, check config file
+	if !hasOpenAI || !hasGemini {
+		// Try to load from config file (import needed)
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			configPath := homeDir + "/.playground/config.json"
+			if data, err := os.ReadFile(configPath); err == nil {
+				var config map[string]string
+				if err := json.Unmarshal(data, &config); err == nil {
+					if !hasGemini && config["gemini_api_key"] != "" {
+						os.Setenv("GEMINI_API_KEY", config["gemini_api_key"])
+						hasGemini = true
+					}
+					if !hasOpenAI && config["openai_api_key"] != "" {
+						os.Setenv("OPENAI_API_KEY", config["openai_api_key"])
+						hasOpenAI = true
+					}
+				}
+			}
+		}
+	}
+
 	if !hasOpenAI && !hasGemini {
-		return nil, fmt.Errorf("no LLM API key found. Set OPENAI_API_KEY or GEMINI_API_KEY environment variable")
+		return nil, fmt.Errorf("no LLM API key found. Run 'pg setup' to configure or set OPENAI_API_KEY or GEMINI_API_KEY environment variable")
 	}
 
 	// Prefer Gemini if both are set (user's request context)

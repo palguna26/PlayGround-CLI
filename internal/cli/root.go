@@ -23,6 +23,7 @@ func Execute() error {
 
 func init() {
 	// Register subcommands
+	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(askCmd)
