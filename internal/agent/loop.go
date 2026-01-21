@@ -12,7 +12,7 @@ func (a *Agent) Run(userInput string, config AgentConfig) (string, error) {
 	messages := []llm.Message{
 		{
 			Role:    "system",
-			Content: getSystemPrompt(),
+			Content: getSystemPrompt(config.IsAgentMode),
 		},
 		{
 			Role:    "user",

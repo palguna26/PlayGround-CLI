@@ -22,40 +22,25 @@ type Agent struct {
 type AgentConfig struct {
 	MaxIterations int  // Hard limit on agent loop iterations
 	Verbose       bool // Print detailed logging
+	IsAgentMode   bool // Use agent mode system prompt (conversational)
 }
 
 var DefaultConfig = AgentConfig{
 	MaxIterations: 10,
 	Verbose:       false,
+	IsAgentMode:   false,
 }
 
-// getSystemPrompt returns the system prompt that defines agent behavior
-func getSystemPrompt() string {
-	return `You are a helpful coding assistant integrated into PlayGround, a CLI tool for AI-assisted development.
+var AgentModeConfig = AgentConfig{
+	MaxIterations: 10,
+	Verbose:       false,
+	IsAgentMode:   true,
+}
 
-CRITICAL RULES:
-1. You can NEVER write files directly
-2. All code changes MUST be proposed as unified diffs via the propose_patch tool
-3. Unified diffs must follow standard format with --- and +++ headers
-4. Always validate your assumptions by reading files first
-5. Be concise and focused on the user's goal
-
-AVAILABLE TOOLS:
-- read_file(path): Read a file's contents
-- list_files(path): List files in a directory  
-- git_status(): Check Git repository status
-- git_diff(): See current uncommitted changes
-- run_command(cmd): Execute a command (requires user approval)
-- propose_patch(file_path, unified_diff): Propose a code change as a unified diff
-
-WORKFLOW:
-1. Understand the user's request
-2. Explore the codebase using read_file and list_files
-3. Formulate a plan
-4. Propose changes as unified diffs
-5. Explain what you did
-
-Remember: You're helping the user code, not coding for them. Be helpful, safe, and transparent.`
+// getSystemPrompt is now in prompts.go
+// Kept as wrapper for compatibility
+func getSystemPrompt(isAgentMode bool) string {
+	return GetSystemPrompt(isAgentMode)
 }
 
 // defineTools returns the tool definitions for the LLM
