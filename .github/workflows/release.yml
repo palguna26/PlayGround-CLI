@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: darwin
+            arch: amd64
+          - os: darwin
+            arch: arm64
+          - os: windows
+            arch: amd64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 0
+        run: |
+          BINARY_NAME="pg"
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            BINARY_NAME="pg.exe"
+          fi
+          
+          go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+            -o "${BINARY_NAME}" ./cmd/pg
+          
+          # Create archive
+          ARCHIVE_NAME="pg_${{ matrix.os }}_${{ matrix.arch }}"
+          mkdir -p "$ARCHIVE_NAME"
+          mv "$BINARY_NAME" "$ARCHIVE_NAME/"
+          cp README.md LICENSE* "$ARCHIVE_NAME/" 2>/dev/null || true
+          
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            zip -r "${ARCHIVE_NAME}.zip" "$ARCHIVE_NAME"
+          else
+            tar -czvf "${ARCHIVE_NAME}.tar.gz" "$ARCHIVE_NAME"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pg_${{ matrix.os }}_${{ matrix.arch }}
+          path: pg_${{ matrix.os }}_${{ matrix.arch }}.*
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec mv {} . \;
+          sha256sum *.tar.gz *.zip > checksums.txt
+          cat checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
+            artifacts/checksums.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
