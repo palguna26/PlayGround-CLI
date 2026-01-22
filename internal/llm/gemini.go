@@ -30,7 +30,7 @@ func NewGeminiProvider() (*GeminiProvider, error) {
 
 	return &GeminiProvider{
 		client: client,
-		model:  "gemini-2.5-flash", // Default model
+		model:  "gemini-2.5-flash-lite", // Default model
 	}, nil
 }
 
