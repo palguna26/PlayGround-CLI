@@ -147,7 +147,7 @@ func (cs *ChatSession) handleStatus() error {
 func (cs *ChatSession) handleHelp() error {
 	fmt.Println("\n═══════════════════════════════════════")
 	fmt.Println("  Available Commands")
-	fmt.Println("═══════════════════════════════════════\n")
+	fmt.Println("═══════════════════════════════════════")
 	fmt.Println("  review   - Show all pending patches as diffs")
 	fmt.Println("  apply    - Apply pending patches to files")
 	fmt.Println("  status   - Display current session status")

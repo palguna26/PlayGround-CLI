@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"time"
@@ -87,8 +88,11 @@ In agent mode, you can:
 
 			// Prompt for goal
 			fmt.Print("What's your goal for this session? ")
+			scanner := bufio.NewScanner(os.Stdin)
 			var goal string
-			fmt.Scanln(&goal)
+			if scanner.Scan() {
+				goal = scanner.Text()
+			}
 
 			if goal == "" {
 				goal = "Interactive coding session"
