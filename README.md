@@ -228,8 +228,10 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Contributing
 
-Contributions welcome! Please read the contributing guidelines first.
+Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
 **PlayGround CLI** - AI-assisted development, safely.
+
+*For more help, see the [User Guide](docs/USER_GUIDE.md) or [open an issue](https://github.com/palguna26/PlayGround-CLI/issues).*
