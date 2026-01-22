@@ -1,91 +1,36 @@
 # PlayGround CLI - User Guide
 
-**Version 0.1.0**
-
-Welcome to PlayGround (`pg`) - your AI-powered coding assistant that keeps you in control. This guide will help you get started and master the tool.
-
----
-
 ## Table of Contents
 
-1. [What is PlayGround?](#what-is-playground)
-2. [Installation](#installation)
-3. [Quick Start](#quick-start)
+1. [Installation](#installation)
+2. [Quick Start](#quick-start)
+3. [Agent Mode](#agent-mode)
 4. [Commands Reference](#commands-reference)
-5. [Workflows & Examples](#workflows--examples)
-6. [Best Practices](#best-practices)
+5. [Configuration](#configuration)
+6. [Workflows](#workflows)
 7. [Troubleshooting](#troubleshooting)
-8. [FAQ](#faq)
-
----
-
-## What is PlayGround?
-
-PlayGround is a **session-based CLI tool** that lets AI agents help you code while maintaining complete safety and control:
-
-✅ **You're always in control** - AI proposes changes, you review and approve  
-✅ **No surprises** - All changes are shown as diffs before applying  
-✅ **Safe by design** - AI can't write files directly  
-✅ **Session-based** - Track your work with clear goals  
-✅ **Local-first** - Everything stays on your machine
-
-### Core Concepts
-
-- **Session**: A work session with a specific goal (e.g., "add JWT auth")
-- **Patch**: A proposed code change shown as a unified diff
-- **Tool**: Actions the AI can take (read files, check Git status, propose changes)
-- **Provider**: The AI service (OpenAI or Gemini)
 
 ---
 
 ## Installation
 
-### Step 1: Prerequisites
-
-Make sure you have:
-- **Go 1.19+** installed ([download](https://go.dev/dl/))
-- **Git** installed
-- An API key from **OpenAI** or **Google Gemini**
-
-### Step 2: Build PlayGround
+### One-Line Install (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/playground.git
-cd playground
-
-# Build the binary
-go build -o pg cmd/pg/main.go
-
-# Optional: Install globally
-# Linux/macOS:
-sudo mv pg /usr/local/bin/
-# Windows: Move pg.exe to a folder in your PATH
+curl -fsSL https://raw.githubusercontent.com/palguna26/PlayGround-CLI/main/scripts/install.sh | sh
 ```
 
-### Step 3: Set Up Your API Key
+### Windows (PowerShell)
 
-Choose your preferred AI provider:
+```powershell
+# After running the curl installer above, add to PATH:
+$env:Path += ";$env:USERPROFILE\.local\bin"
 
-**Option A: Use Gemini (Recommended - Fast & Free Tier)**
-```bash
-export GEMINI_API_KEY="your-gemini-api-key-here"
+# Make permanent:
+[Environment]::SetEnvironmentVariable("Path", "$env:Path;$env:USERPROFILE\.local\bin", "User")
 ```
 
-**Option B: Use OpenAI**
-```bash
-export OPENAI_API_KEY="your-openai-api-key-here"
-```
-
-**Option C: Both (Gemini will be preferred)**
-```bash
-export GEMINI_API_KEY="your-gemini-key"
-export OPENAI_API_KEY="your-openai-key"
-# To force OpenAI:
-export LLM_PROVIDER="openai"
-```
-
-### Step 4: Verify Installation
+### Verify Installation
 
 ```bash
 pg --version
@@ -96,639 +41,321 @@ pg --version
 
 ## Quick Start
 
-Let's walk through your first PlayGround session:
-
-### 1. Navigate to Your Project
+### 1. Configure API Key
 
 ```bash
-cd /path/to/your/project
-# Must be a Git repository
+pg setup
 ```
 
-### 2. Start a Session
+Follow the wizard to enter your Gemini or OpenAI API key.
+
+### 2. Start Agent Mode
 
 ```bash
-pg start "add input validation to user registration"
+cd your-project
+pg agent
 ```
 
-**Output:**
+### 3. Chat Naturally
+
 ```
-✓ Started new session: pg-1
-  Goal: add input validation to user registration
-  Repo: /path/to/your/project
+You: Add a REST API endpoint for user registration
+
+Agent: I'll create a user registration endpoint.
+First, let me check your project structure...
 ```
 
-### 3. Ask the AI for Help
+---
+
+## Agent Mode
+
+Agent mode is the primary way to interact with PlayGround. It provides a conversational interface where you can:
+
+- Describe what you want in natural language
+- See the AI's plan before execution
+- Review all changes as diffs
+- Apply or reject modifications
+
+### Starting Agent Mode
 
 ```bash
-pg ask "show me the current user registration code"
+pg agent                    # New session
+pg agent --resume pg-5      # Resume previous session
 ```
 
-**Output:**
+### In-Chat Commands
+
+| Command | Description |
+|---------|-------------|
+| `review` | Display all pending patches as diffs |
+| `apply` | Apply pending patches (with confirmation) |
+| `status` | Show session information |
+| `help` | List available commands |
+| `exit` | Save session and exit |
+
+### Example Session
+
 ```
-Using LLM provider: Gemini
-🤖 Agent working...
+You: Create a config file parser for YAML
 
-Agent: I've read the registration code in auth/register.go. 
-The function currently doesn't validate email format or password strength.
-Would you like me to add validation?
+Agent: I'll create a YAML config parser. Let me check if you have 
+any existing config handling...
+
+[Executing: list_files, read_file]
+
+I see you're using Go. I'll create a config package with:
+1. Config struct with common fields
+2. Load function for YAML parsing
+3. Validation logic
+
+I've prepared the changes. Type 'review' to see them.
+
+You: review
+
+═══ Patch 1/2 ═══
+File: config/config.go
+[diff output...]
+
+═══ Patch 2/2 ═══
+File: config/loader.go
+[diff output...]
+
+You: apply
+
+✅ Successfully applied 2 patch(es)
 ```
-
-### 4. Request Changes
-
-```bash
-pg ask "add email validation and password strength checks"
-```
-
-**Output:**
-```
-🤖 Agent working...
-
-Agent: I've proposed changes to add email validation using regex 
-and password strength requirements (min 8 chars, 1 uppercase, 1 number).
-Review with 'pg review' and apply with 'pg apply'.
-```
-
-### 5. Review Proposed Changes
-
-```bash
-pg review
-```
-
-**Output:**
-```
-Session: pg-1
-Pending patches: 1
-
-═══ Patch 1/1 ═══
-File: auth/register.go
-Created: 2026-01-19 16:15:30
-
---- auth/register.go
-+++ auth/register.go
-@@ -5,6 +5,7 @@
- 
- import (
-     "database/sql"
-+    "regexp"
- )
- 
-@@ -12,6 +13,25 @@
-+func validateEmail(email string) bool {
-+    emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-+    return emailRegex.MatchString(email)
-+}
-+
-+func validatePassword(password string) error {
-+    if len(password) < 8 {
-+        return fmt.Errorf("password must be at least 8 characters")
-+    }
-+    // ... (full validation code)
-+}
-...
-```
-
-### 6. Apply the Changes
-
-```bash
-pg apply
-```
-
-**Output:**
-```
-About to apply 1 patch(es) to the repository.
-Apply all patches? [y/N]: y
-Applying patch 1/1: auth/register.go... ✓
-
-✓ Successfully applied 1 patch(es)
-```
-
-### 7. Check Session Status
-
-```bash
-pg status
-```
-
-**Output:**
-```
-Session: pg-1
-Goal: add input validation to user registration
-Repository: /path/to/your/project
-Created: 2026-01-19 16:10:00
-
-Pending Patches: 0
-Tool History: 4 calls
-
-Recent Tool Calls:
-  ✓ read_file - 16:15:20
-  ✓ read_file - 16:15:25
-  ✓ propose_patch - 16:15:30
-```
-
-**Congratulations! You've completed your first PlayGround session.** 🎉
 
 ---
 
 ## Commands Reference
 
-### `pg start "<goal>"`
+### `pg setup`
 
-**Creates a new coding session**
-
-```bash
-pg start "refactor database queries to use prepared statements"
-```
-
-- Generates a unique session ID (pg-1, pg-2, etc.)
-- Sets the session goal
-- Makes it the active session
-- Must be run inside a Git repository
-
-### `pg ask "<question or task>"`
-
-**Interact with the AI agent**
+Interactive configuration wizard.
 
 ```bash
-pg ask "what files handle authentication?"
-pg ask "add error logging to the API handlers"
-pg ask "explain how the cache invalidation works"
+pg setup
 ```
 
-- Requires an active session
-- AI can read files, check Git status, and propose changes
-- Shows which LLM provider is being used
-- Saves progress automatically
+- Configures API keys for Gemini/OpenAI
+- Sets preferred provider
+- Saves to `~/.playground/config.json`
 
-**AI Capabilities:**
-- Read any file in the repository
-- List directory contents
-- Check Git status and diffs
-- Propose code changes as patches
-- Run commands (requires your approval)
+### `pg agent`
 
-### `pg status`
-
-**Display current session information**
+Start interactive agent mode.
 
 ```bash
-pg status
+pg agent                    # New session
+pg agent --resume <id>      # Resume session
 ```
 
-Shows:
-- Session ID and goal
-- Repository path
-- Creation time
-- Number of pending patches
-- Recent tool executions
-- Context summary (if AI has added one)
+### `pg start`
+
+Start a new session with a specific goal.
+
+```bash
+pg start "implement user authentication"
+```
+
+### `pg ask`
+
+Ask a one-off question without starting a session.
+
+```bash
+pg ask "how do I parse JSON in Go?"
+```
 
 ### `pg review`
 
-**Review all pending patches before applying**
+Display all pending patches.
 
 ```bash
 pg review
 ```
 
-- Shows each patch as a unified diff
-- Displays file path and creation time
-- Lets you inspect exactly what will change
-- No patches? Shows "No pending patches"
-
 ### `pg apply`
 
-**Apply all pending patches to your code**
+Apply all pending patches.
 
 ```bash
 pg apply
 ```
 
-- Asks for confirmation before applying
-- Validates each patch before applying
-- Applies atomically (all or nothing per patch)
-- Creates backups and rolls back on failure
-- Clears pending patches on success
+### `pg status`
 
-**Interactive prompt:**
-```
-About to apply 2 patch(es) to the repository.
-Apply all patches? [y/N]:
+Show current session status.
+
+```bash
+pg status
 ```
 
-### `pg resume <session-id>`
+### `pg resume`
 
-**Resume a previous session**
+Resume a previous session.
 
 ```bash
 pg resume pg-3
 ```
 
-- Loads session from `.pg/sessions/`
-- Validates repository matches
-- Sets as active session
-- Restores all context and pending patches
+---
 
-To see available sessions, check `.pg/sessions/` in your repo.
+## Configuration
+
+### Config File Location
+
+- **Linux/macOS**: `~/.playground/config.json`
+- **Windows**: `%USERPROFILE%\.playground\config.json`
+
+### Config Structure
+
+```json
+{
+  "gemini_api_key": "AIza...",
+  "openai_api_key": "sk-...",
+  "llm_provider": "gemini"
+}
+```
+
+### Environment Variables
+
+Environment variables override config file settings:
+
+```bash
+export GEMINI_API_KEY="your-key"
+export OPENAI_API_KEY="your-key"
+export LLM_PROVIDER="gemini"  # or "openai"
+```
+
+### Provider Priority
+
+1. `LLM_PROVIDER` environment variable (if set)
+2. Config file `llm_provider` setting
+3. Auto-detect: Gemini preferred if both keys present
 
 ---
 
-## Workflows & Examples
+## Workflows
 
-### Workflow 1: Adding a New Feature
-
-**Goal:** Add rate limiting to an API
+### Feature Development
 
 ```bash
-# Start session
-pg start "add rate limiting to API endpoints"
+# 1. Start session with clear goal
+pg agent
 
-# Explore codebase
-pg ask "show me how requests are currently handled"
+# 2. Describe the feature
+You: Add pagination to the user list API
 
-# Ask for implementation
-pg ask "add rate limiting middleware with 100 requests per minute limit"
+# 3. Review changes
+You: review
 
-# Review and iterate
-pg review
-pg ask "add Redis-based rate limiting instead of in-memory"
+# 4. Apply if satisfied
+You: apply
 
-# Apply when satisfied
-pg review
-pg apply
+# 5. Continue iterating
+You: Now add sorting support
 ```
 
-### Workflow 2: Bug Investigation & Fix
-
-**Goal:** Fix a memory leak
+### Code Review Assistance
 
 ```bash
-# Start session
-pg start "investigate and fix memory leak in worker pool"
+pg agent
 
-# Investigation
-pg ask "which files manage the worker pool?"
-pg ask "show me the worker lifecycle code"
-pg ask "are workers being properly closed?"
+You: Review my changes in auth.go for security issues
 
-# Fix proposal
-pg ask "add defer close() calls and proper cleanup"
-
-# Review and apply
-pg review
-pg apply
+Agent: I'll analyze auth.go for security vulnerabilities...
+[Analysis and suggestions]
 ```
 
-### Workflow 3: Refactoring
-
-**Goal:** Extract common logic into a helper
+### Bug Fixing
 
 ```bash
-pg start "extract database connection code into helper"
+pg agent
 
-# Analysis
-pg ask "find all places where we create database connections"
+You: The login endpoint returns 500 when email is missing
 
-# Refactor
-pg ask "create a db package with a NewConnection helper and update all callers"
+Agent: Let me check the login handler...
+[Proposes fix with validation]
 
-# Review large changes carefully
-pg review  # Check all files being modified
-
-# Apply
-pg apply
+You: apply
 ```
 
-### Workflow 4: Code Review Assistance
+---
 
-**Goal:** Understand unfamiliar code
+## Troubleshooting
+
+### Rate Limit Errors (429)
+
+**Cause**: API rate limit exceeded.
+
+**Solutions**:
+1. Wait 1-2 minutes and retry
+2. Switch to a different provider
+3. Upgrade to a paid API tier
 
 ```bash
-pg start "understand authentication flow"
-
-# Exploration (read-only, no patches)
-pg ask "explain the authentication flow step by step"
-pg ask "what security measures are in place?"
-pg ask "trace what happens when login fails"
-
-# Check status (should show 0 pending patches)
-pg status
+# Switch provider temporarily
+export LLM_PROVIDER="openai"
+pg agent
 ```
 
-### Workflow 5: Testing & Validation
+### "No LLM API key found"
 
-**Goal:** Add test coverage
+**Solution**: Run the setup wizard.
 
 ```bash
-pg start "add unit tests for auth package"
+pg setup
+```
 
-# Generate tests
-pg ask "create unit tests for the login function"
-pg ask "add tests for edge cases like empty email or wrong password"
+### "pg: command not found"
 
-# Review tests
-pg review
+**Solution**: Add install directory to PATH.
 
-# Apply
-pg apply
+```bash
+# Linux/macOS
+echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
+source ~/.bashrc
 
-# Run tests (with approval)
-pg ask "run go test ./auth/..."
-# Prompts: Allow this command? [y/N]:
+# Windows PowerShell
+[Environment]::SetEnvironmentVariable("Path", "$env:Path;$env:USERPROFILE\.local\bin", "User")
+# Restart terminal
+```
+
+### Session Not Found
+
+**Solution**: List available sessions and resume the correct one.
+
+```bash
+pg status  # Shows current session
+```
+
+### Changes Not Applied
+
+**Solution**: Ensure you run `apply` after reviewing.
+
+```bash
+pg review   # See pending changes
+pg apply    # Apply them
 ```
 
 ---
 
 ## Best Practices
 
-### ✅ DO
-
-1. **Start with clear goals**
-   ```bash
-   pg start "migrate from MySQL to PostgreSQL"  # ✅ Clear
-   # NOT: pg start "database stuff"              # ❌ Vague
-   ```
-
-2. **Review before applying**
-   - Always run `pg review` before `pg apply`
-   - Read the diffs carefully
-   - Verify the AI understood your intent
-
-3. **Use descriptive questions**
-   ```bash
-   pg ask "add JWT authentication to the login endpoint"  # ✅ Specific
-   # NOT: pg ask "make it better"                         # ❌ Vague
-   ```
-
-4. **Commit after applying patches**
-   ```bash
-   pg apply
-   git add .
-   git commit -m "Add JWT auth (via PlayGround pg-5)"
-   ```
-
-5. **Keep sessions focused**
-   - One goal per session
-   - Start a new session for unrelated work
-
-6. **Check status regularly**
-   ```bash
-   pg status  # See what's been done
-   ```
-
-### ❌ DON'T
-
-1. **Don't apply without reviewing**
-   ```bash
-   pg apply  # Without pg review first - risky!
-   ```
-
-2. **Don't ignore context mismatches**
-   - If `pg apply` fails due to context mismatch, the file has changed
-   - Regenerate patches with a fresh `pg ask`
-
-3. **Don't use for binary files**
-   - Patches work on text files only
-   - AI can't see or modify binary files
-
-4. **Don't expect perfection**
-   - AI-generated code should be reviewed
-   - Test changes before committing
-
-5. **Don't work across repos**
-   - One session = one repository
-   - Start fresh when switching repos
-
----
-
-## Troubleshooting
-
-### "not a git repository"
-
-**Problem:** Command fails with this error
-
-**Solution:** 
-```bash
-cd /path/to/your/git/repo
-git status  # Verify it's a Git repo
-pg start "your goal"
-```
-
-### "no active session"
-
-**Problem:** Running `pg ask`, `pg status`, or `pg review` with no session
-
-**Solution:**
-```bash
-pg start "describe your goal here"
-```
-
-Or resume an existing session:
-```bash
-pg resume pg-3
-```
-
-### "no LLM API key found"
-
-**Problem:** No API key configured
-
-**Solution:**
-```bash
-export GEMINI_API_KEY="your-key-here"
-# OR
-export OPENAI_API_KEY="your-key-here"
-```
-
-Add to your shell profile (~/.bashrc, ~/.zshrc) to persist:
-```bash
-echo 'export GEMINI_API_KEY="your-key"' >> ~/.zshrc
-```
-
-### Patch Application Failed
-
-**Problem:** `pg apply` fails with "context mismatch"
-
-**Cause:** The file has changed since the patch was created
-
-**Solution:**
-```bash
-# Check what changed
-git status
-git diff
-
-# Regenerate patches
-pg ask "rebase the previous changes on the current code"
-pg review
-pg apply
-```
-
-### Provider Not Working
-
-**Problem:** Want to switch from OpenAI to Gemini (or vice versa)
-
-**Solution:**
-```bash
-export LLM_PROVIDER="gemini"  # or "openai"
-export GEMINI_API_KEY="your-gemini-key"
-```
-
-### Session Files Corrupted
-
-**Problem:** Session won't load
-
-**Solution:**
-```bash
-# Check session files
-ls .pg/sessions/
-
-# View session JSON
-cat .pg/sessions/pg-1.json
-
-# Start fresh if needed
-pg start "new goal"
-```
-
-### Agent Not Responding
-
-**Problem:** `pg ask` hangs or times out
-
-**Check:**
-1. API key is valid
-2. Internet connection is working
-3. API service is not experiencing downtime
-
-**Try:**
-```bash
-# Use the other provider
-export LLM_PROVIDER="openai"  # if using Gemini
-# OR
-export LLM_PROVIDER="gemini"  # if using OpenAI
-```
-
----
-
-## FAQ
-
-### **Q: Is my code sent to OpenAI/Gemini?**
-
-A: Yes, when you use `pg ask`, the AI needs to see your code to help. Only the files the agent reads are sent. If privacy is critical, use a local-only LLM (not supported in v0.1).
-
-### **Q: Can the AI delete files?**
-
-A: No. The AI can only propose changes as patches. Deletions would appear in the diff for your review. You control what gets applied.
-
-### **Q: What happens if my session crashes?**
-
-A: Sessions are saved after every agent action. Resume with `pg resume <session-id>` and your progress is restored.
-
-### **Q: Can I use this for non-code files?**
-
-A: Yes! It works with any text files - markdown, config files, documentation, etc.
-
-### **Q: How do I see all my sessions?**
-
-A: Check the `.pg/sessions/` directory:
-```bash
-ls .pg/sessions/
-# Output: pg-1.json  pg-2.json  pg-3.json
-```
-
-### **Q: Can I edit sessions manually?**
-
-A: Yes, they're JSON files. But be careful - invalid JSON will break the session.
-
-### **Q: Does this replace Git?**
-
-A: No! PlayGround works *with* Git. You still commit, push, and manage your repository as usual. PlayGround just helps you generate changes.
-
-### **Q: What's the difference between `pg ask` and just using ChatGPT?**
-
-A: PlayGround:
-- Maintains session context
-- Can read your actual files
-- Proposes changes as reviewable patches
-- Enforces safety (no direct writes)
-- Integrates with your Git workflow
-
-### **Q: Can multiple people use the same session?**
-
-A: Not recommended. Sessions are local to your machine. Use Git to collaborate.
-
-### **Q: How much does this cost?**
-
-A: That depends on your LLM provider:
-- **Gemini**: Generous free tier, Gemini 2.0 Flash is very affordable
-- **OpenAI**: Pay-per-token pricing
-
-PlayGround itself is free and open-source.
-
-### **Q: Can I customize the AI's behavior?**
-
-A: Not in v0.1. The system prompt is fixed. Future versions may support customization.
-
----
-
-## Tips & Tricks
-
-### Tip 1: Use Git Branches for Experiments
-
-```bash
-git checkout -b ai-experiment
-pg start "try refactoring with AI"
-# ... work with pg ...
-# If you like it: git merge
-# If not: git checkout main && git branch -D ai-experiment
-```
-
-### Tip 2: Chain Questions for Context
-
-```bash
-pg ask "show me the login function"
-pg ask "now add 2FA support to it"  # AI remembers the previous context
-```
-
-### Tip 3: Ask for Explanations
-
-```bash
-pg ask "explain how the caching works"  # Read-only, no patches
-```
-
-### Tip 4: Use Descriptive Session Goals
-
-Your future self will thank you:
-```bash
-pg start "migrate database schema to v2"  # ✅
-# NOT: pg start "fix stuff"                # ❌
-```
-
-### Tip 5: Keep a Session Log
-
-```bash
-pg status > session-log.txt
-git add session-log.txt
-git commit -m "Session pg-5 completed"
-```
-
----
-
-## Next Steps
-
-Now that you know the basics, try:
-
-1. **Start a real session** in one of your projects
-2. **Experiment with different questions** to see what the AI can do
-3. **Review the README** for architecture details
-4. **Check the walkthrough** to understand how it works internally
-
-Happy coding with PlayGround! 🚀
+1. **Be Specific**: "Add JWT authentication with refresh tokens" > "Add auth"
+2. **Review Before Applying**: Always check diffs before applying
+3. **Iterate**: Start small, build incrementally
+4. **Use Git**: While optional, Git provides better versioning
+5. **Session Goals**: Set clear goals when starting sessions
 
 ---
 
 ## Getting Help
 
-- **Issues**: File on GitHub (when available)
-- **Questions**: Check this guide first, then the README
-- **Contributing**: See CONTRIBUTING.md (follow the safety-first philosophy)
+- **In-agent help**: Type `help` in agent mode
+- **Command help**: `pg --help` or `pg <command> --help`
+- **Issues**: [GitHub Issues](https://github.com/palguna26/PlayGround-CLI/issues)
 
 ---
 
-**Remember: PlayGround is infrastructure, not magic. You're in control. Always review, always verify, always test.**
+*PlayGround CLI - AI-assisted development, safely.*

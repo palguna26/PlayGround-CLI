@@ -1,305 +1,235 @@
-# PlayGround CLI (`pg`)
+# PlayGround CLI
 
-**A session-based, local-first CLI that allows AI agents to safely modify code through diff-only, reviewable patches.**
+**AI-Powered Coding Assistant with Safety Guarantees**
 
-PlayGround is developer infrastructure, not a product UI. It's an open runtime for coding agents that prioritizes **correctness**, **safety**, and **long-term maintainability**.
+PlayGround is a CLI tool that brings AI-assisted development to your terminal with a critical difference: **you stay in control**. Unlike other AI coding tools, PlayGround never applies changes automatically. Every modification is shown as a diff and requires your explicit approval.
 
-## Core Principles
-
-✅ **Diff-only writes** — The agent can NEVER write files directly  
-✅ **Session-based** — Users explicitly start sessions with clear goals  
-✅ **Reviewable patches** — All changes must be reviewed before applying  
-✅ **Local-first** — No telemetry, no background daemons  
-✅ **CLI-first** — No TUI, each command does one thing and exits
-
-## Installation
-
-### Prerequisites
-
-- Go 1.19 or later
-- Git
-- API key for either:
-  - **OpenAI** (GPT-4, GPT-3.5)
-  - **Google Gemini** (Gemini 2.0 Flash, Gemini Pro)
-
-### Build from source
+## Quick Install
 
 ```bash
-git clone https://github.com/yourusername/playground.git
-cd playground
-go build -o pg cmd/pg/main.go
+curl -fsSL https://raw.githubusercontent.com/palguna26/PlayGround-CLI/main/scripts/install.sh | sh
 ```
 
-### Install globally
+Or download from [Releases](https://github.com/palguna26/PlayGround-CLI/releases).
+
+## Features
+
+- 🤖 **Interactive Agent Mode** - Chat naturally with AI (like Claude Code)
+- 🔒 **Safe by Design** - All changes shown as diffs, never auto-applied
+- 🔄 **Multi-Provider** - Supports OpenAI GPT-4 and Google Gemini
+- 📂 **Git Optional** - Works with or without Git (uses snapshots)
+- ⚡ **Streaming Responses** - See AI thinking in real-time
+- 🔁 **Session Resumption** - Pick up where you left off
+
+## Quick Start
 
 ```bash
-# Linux/macOS
-sudo mv pg /usr/local/bin/
+# 1. Configure your API key
+pg setup
 
-# Windows
-# Move pg.exe to a directory in your PATH
+# 2. Start interactive agent mode
+pg agent
+
+# 3. Chat naturally!
+You: Add a login endpoint with JWT authentication
+Agent: I'll create a JWT-based login system...
 ```
 
-## Setup
+## Commands
 
-### Option 1: Use Gemini (Recommended)
+| Command | Description |
+|---------|-------------|
+| `pg setup` | Interactive API key configuration |
+| `pg agent` | Start interactive chat mode |
+| `pg start "goal"` | Start a new session with a goal |
+| `pg ask "question"` | Ask a one-off question |
+| `pg review` | Show pending changes as diffs |
+| `pg apply` | Apply approved changes |
+| `pg status` | Show current session status |
+| `pg resume <id>` | Resume a previous session |
+
+## Agent Mode
+
+The flagship feature - an interactive chat interface:
 
 ```bash
-export GEMINI_API_KEY="your-gemini-api-key-here"
+pg agent
 ```
 
-### Option 2: Use OpenAI
+```
+╔════════════════════════════════════════════════════════════╗
+║           PlayGround Agent - Interactive Mode              ║
+╚════════════════════════════════════════════════════════════╝
 
-```bash
-export OPENAI_API_KEY="your-openai-api-key-here"
+Session: pg-1
+Goal: Add authentication
+
+You: Create a user model with email and password
+
+Agent: I'll create a user model with bcrypt password hashing.
+Let me first check your project structure...
+
+[Reading files...]
+
+I've prepared the changes. Type 'review' to see them.
+
+You: review
+
+═══ Patch 1/1 ═══
+File: models/user.go
+
+--- /dev/null
++++ models/user.go
+@@ -0,0 +1,25 @@
++package models
++
++import "golang.org/x/crypto/bcrypt"
++
++type User struct {
++    ID       int
++    Email    string
++    Password string
++}
+...
+
+You: apply
+
+✅ Successfully applied 1 patch(es)
 ```
 
-### Option 3: Explicit Provider Selection
+### In-Chat Commands
 
-If you have both API keys and want to choose:
+| Command | Action |
+|---------|--------|
+| `review` | Show pending patches |
+| `apply` | Apply patches |
+| `status` | Session info |
+| `help` | Show commands |
+| `exit` | Save and quit |
+
+## Configuration
+
+### Setup Wizard (Recommended)
 
 ```bash
+pg setup
+```
+
+This guides you through:
+- Choosing your LLM provider (Gemini or OpenAI)
+- Entering your API key
+- Saving configuration securely
+
+Config is stored in `~/.playground/config.json`.
+
+### Environment Variables (Alternative)
+
+```bash
+# Gemini (recommended - generous free tier)
+export GEMINI_API_KEY="your-key"
+
+# OpenAI
+export OPENAI_API_KEY="your-key"
+
+# Force specific provider
 export LLM_PROVIDER="gemini"  # or "openai"
-export GEMINI_API_KEY="your-gemini-key"
-export OPENAI_API_KEY="your-openai-key"
-```
-
-**Auto-Detection**: If both API keys are set without `LLM_PROVIDER`, PlayGround will prefer Gemini.
-
-## Usage
-
-### 1. Start a session
-
-```bash
-pg start "add jwt auth to api"
-```
-
-This creates a new session with a unique ID and stores it in `.pg/sessions/`.
-
-### 2. Ask the agent questions or give it tasks
-
-```bash
-pg ask "what authentication do we currently use?"
-pg ask "add jwt middleware to the auth package"
-```
-
-The agent will:
-- Read files using `read_file` and `list_files` tools
-- Check repository state with `git_status` and `git_diff`
-- Propose code changes as unified diffs via `propose_patch`
-
-### 3. Check session status
-
-```bash
-pg status
-```
-
-Shows:
-- Current session ID and goal
-- Number of pending patches
-- Tool execution history
-
-### 4. Review proposed patches
-
-```bash
-pg review
-```
-
-Displays all pending patches as unified diffs for manual review.
-
-### 5. Apply patches
-
-```bash
-pg apply
-```
-
-Applies all validated patches after user confirmation. Each patch is:
-- Validated before application
-- Applied atomically with backup/rollback
-- Guaranteed to match current file state
-
-### 6. Resume a previous session
-
-```bash
-pg resume pg-12
-```
-
-## Architecture
-
-```
-playground/
-├── cmd/pg/           # CLI entry point
-├── internal/
-│   ├── cli/          # Command implementations
-│   ├── session/      # Session persistence
-│   ├── tools/        # Agent tools (read, list, git, run, propose_patch)
-│   ├── patch/        # Patch validation & application
-│   ├── llm/          # LLM provider abstraction (OpenAI, Gemini)
-│   └── agent/        # Agent runtime & loop
-└── go.mod
 ```
 
 ## Safety Guarantees
 
-### 1. No Direct File Writes
-The agent can only propose changes as unified diffs. The patch engine is the ONLY code that modifies files.
+PlayGround is built with safety as the core principle:
 
-### 2. Hard Stop Conditions
-The agent loop terminates after:
-- Max iterations (default: 10)
-- LLM signals completion
-- No tool calls in response
-- Error encountered
+| Feature | PlayGround | Other AI Tools |
+|---------|------------|----------------|
+| Auto-apply changes | ❌ Never | ✅ Yes |
+| Show diffs before apply | ✅ Always | ❌ Sometimes |
+| Require approval | ✅ Always | ❌ No |
+| Rollback support | ✅ Full | ❌ Limited |
+| Git optional | ✅ Yes | ❌ Usually required |
 
-### 3. Atomic Operations
-Patch application is atomic:
-- Backup created before modification
-- Validation performed upfront
-- Rollback on any failure
+## Architecture
 
-### 4. Session Persistence
-Sessions are saved after every agent iteration, ensuring no data loss even if the process crashes.
+```
+┌─────────────────────────────────────────┐
+│              User Interface             │
+│   (pg agent / pg ask / pg start)        │
+└───────────────────┬─────────────────────┘
+                    │
+┌───────────────────▼─────────────────────┐
+│              Agent Core                  │
+│   • System Prompts                       │
+│   • Tool Definitions                     │
+│   • Session Management                   │
+└───────────────────┬─────────────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+┌──────────────┐        ┌──────────────┐
+│  LLM Layer   │        │    Tools     │
+│  • OpenAI    │        │  • read_file │
+│  • Gemini    │        │  • list_files│
+│  • Streaming │        │  • git_*     │
+└──────────────┘        │  • patches   │
+                        └──────────────┘
+                              │
+┌─────────────────────────────▼───────────┐
+│            Workspace Layer              │
+│   • Git Mode (commits, stash)           │
+│   • Snapshot Mode (SHA-based)           │
+└─────────────────────────────────────────┘
+```
 
-## Agent Tools
+## Requirements
 
-| Tool | Description | Safety |
-|------|-------------|--------|
-| `read_file(path)` | Read file contents | Path validation, repo bounds check |
-| `list_files(path)` | List directory contents | Path validation, hidden file filtering |
-| `git_status()` | Get Git status | Read-only |
-| `git_diff()` | Get uncommitted changes | Read-only |
-| `run_command(cmd)` | Execute shell command | **Requires user approval** |
-| `propose_patch(file_path, unified_diff)` | Propose code change | Stored only, not applied |
+- **API Key**: Gemini (free) or OpenAI (paid)
+- **OS**: Linux, macOS, Windows
+- **Git**: Optional (uses snapshots if not available)
 
-## Example Workflow
+## Building from Source
 
 ```bash
-# Start a new session
-$ pg start "refactor authentication to use JWT"
-✓ Started new session: pg-1
-  Goal: refactor authentication to use JWT
-  Repo: /home/user/myproject
-
-# Ask agent to analyze current auth
-$ pg ask "what authentication method do we use now?"
-🤖 Agent working...
-
-Agent: I've analyzed the codebase. Currently using session-based 
-authentication in auth/session.go with cookies.
-
-# Ask agent to propose JWT implementation
-$ pg ask "add JWT authentication"
-🤖 Agent working...
-
-Agent: I've proposed changes to implement JWT authentication.
-Review with 'pg review' and apply with 'pg apply'.
-
-# Review proposed changes
-$ pg review
-Session: pg-1
-Pending patches: 2
-
-═══ Patch 1/2 ═══
-File: auth/jwt.go
-Created: 2026-01-18 17:45:32
-
---- /dev/null
-+++ auth/jwt.go
-...
-
-═══ Patch 2/2 ═══
-File: main.go
-Created: 2026-01-18 17:45:35
-
---- main.go
-+++ main.go
-...
-
-# Apply patches
-$ pg apply
-About to apply 2 patch(es) to the repository.
-Apply all patches? [y/N]: y
-Applying patch 1/2: auth/jwt.go... ✓
-Applying patch 2/2: main.go... ✓
-
-✓ Successfully applied 2 patch(es)
+git clone https://github.com/palguna26/PlayGround-CLI.git
+cd PlayGround-CLI
+go build -o pg ./cmd/pg
+sudo mv pg /usr/local/bin/
 ```
-
-## Session Storage
-
-Sessions are stored in `.pg/sessions/` as JSON files:
-
-```json
-{
-  "id": "pg-1",
-  "repo": "/absolute/path/to/repo",
-  "goal": "add jwt auth to api",
-  "context_summary": "",
-  "pending_patches": [],
-  "tool_history": [],
-  "created_at": "2026-01-18T17:30:00Z"
-}
-```
-
-The active session is tracked in `.pg/active`.
-
-## Limitations (v0.1)
-
-- Single agent only
-- Supports OpenAI and Google Gemini providers
-- No plugins or MCP integration
-- No LSP or IDE integration
-- No auto-apply (by design)
-- English only (agent prompts)
 
 ## Troubleshooting
 
-**"not a git repository"**  
-→ Run `pg` commands from within a Git repository.
+### "Rate limit error (429)"
 
-**"no active session"**  
-→ Start a session with `pg start "<goal>"`.
+You've hit the API rate limit. Options:
+- Wait 1-2 minutes and retry
+- Switch providers: `pg setup`
+- Use a paid API tier
 
-**"no LLM API key found"**  
-→ Set either `GEMINI_API_KEY` or `OPENAI_API_KEY`:
+### "pg: command not found"
+
+Add the install directory to your PATH:
+
 ```bash
-export GEMINI_API_KEY="your-key"
-# OR
-export OPENAI_API_KEY="your-key"
+# Linux/macOS
+export PATH="$PATH:$HOME/.local/bin"
+
+# Windows PowerShell
+$env:Path += ";$env:USERPROFILE\.local\bin"
 ```
 
-**Want to switch providers?**  
-→ Use `LLM_PROVIDER` environment variable:
+### "No LLM API key found"
+
+Run the setup wizard:
 ```bash
-export LLM_PROVIDER="gemini"  # or "openai"
+pg setup
 ```
-
-**Patch application failed**  
-→ File may have changed since patch was proposed. Check `git status` and regenerate patches.
-
-## Contributing
-
-PlayGround is infrastructure. Contributions should prioritize:
-1. **Correctness** over features
-2. **Safety** over convenience  
-3. **Simplicity** over cleverness
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE)
 
-## Philosophy
+## Contributing
 
-> "Treat PlayGround as infrastructure, not a product UI."
+Contributions welcome! Please read the contributing guidelines first.
 
-PlayGround is designed to be:
-- **Trustworthy** — Never modifies files without review
-- **Transparent** — Every action is logged and auditable
-- **Predictable** — Deterministic behavior, no surprises
-- **Respectful** — You control when and how code changes
+---
 
-It is NOT designed to be:
-- Flashy
-- Automatic
-- A replacement for your IDE
-- A background service
+**PlayGround CLI** - AI-assisted development, safely.
