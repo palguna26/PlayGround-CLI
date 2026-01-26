@@ -275,9 +275,12 @@ main() {
     
     # Quick start
     printf "Get started:\n"
-    printf "  ${BLUE}pg setup${NC}         # Configure API key\n"
+    printf "  ${BLUE}pg setup${NC}         # Configure local model\n"
     printf "  ${BLUE}pg agent${NC}         # Start interactive mode\n"
     printf "  ${BLUE}pg --help${NC}        # Show all commands\n"
+    printf "\n"
+    printf "${YELLOW}NOTE:${NC} You'll need to install llama.cpp and download a model.\n"
+    printf "See: https://github.com/${REPO}#requirements\n"
     printf "\n"
 }
 
