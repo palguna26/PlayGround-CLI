@@ -20,8 +20,8 @@ func NewDownloadHelper(manager *ModelManager) *DownloadHelper {
 
 // DownloadDeepSeekCoder downloads DeepSeek-Coder-7B-Instruct v1.5 Q4_K_M
 func (d *DownloadHelper) DownloadDeepSeekCoder(progressCallback func(downloaded, total int64)) error {
-	// Model URL from HuggingFace
-	modelURL := "https://huggingface.co/TheBloke/deepseek-coder-7B-instruct-v1.5-GGUF/resolve/main/deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf"
+	// Model URL from HuggingFace (using QuantFactory repo - no auth required)
+	modelURL := "https://huggingface.co/QuantFactory/deepseek-coder-7b-instruct-v1.5-GGUF/resolve/main/deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf"
 	modelName := "deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf"
 
 	// Ensure models directory exists
