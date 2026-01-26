@@ -1,8 +1,8 @@
 # PlayGround CLI
 
-**AI-Powered Coding Assistant with Safety Guarantees**
+**Local-First AI Coding Assistant with Safety Guarantees**
 
-PlayGround is a CLI tool that brings AI-assisted development to your terminal with a critical difference: **you stay in control**. Unlike other AI coding tools, PlayGround never applies changes automatically. Every modification is shown as a diff and requires your explicit approval.
+PlayGround is a CLI tool that brings AI-assisted development to your terminal with a critical difference: **fully local and offline**. No API keys, no cloud dependencies, just you and your code.
 
 ## Quick Install
 
@@ -10,13 +10,18 @@ PlayGround is a CLI tool that brings AI-assisted development to your terminal wi
 curl -fsSL https://raw.githubusercontent.com/palguna26/PlayGround-CLI/main/scripts/install.sh | sh
 ```
 
-Or download from [Releases](https://github.com/palguna26/PlayGround-CLI/releases).
+Then set up your local model:
+
+```bash
+pg setup
+```
 
 ## Features
 
-- 🤖 **Interactive Agent Mode** - Chat naturally with AI (like Claude Code)
+- 🤖 **Fully Local** - Runs DeepSeek-Coder-7B-Instruct v1.5 on your machine
 - 🔒 **Safe by Design** - All changes shown as diffs, never auto-applied
-- 🔄 **Multi-Provider** - Supports OpenAI GPT-4 and Google Gemini
+- 📴 **Offline-First** - Works without internet after initial setup
+- 💬 **Interactive Agent Mode** - Chat naturally with AI (like Claude Code)
 - 📂 **Git Optional** - Works with or without Git (uses snapshots)
 - ⚡ **Streaming Responses** - See AI thinking in real-time
 - 🔁 **Session Resumption** - Pick up where you left off
@@ -24,22 +29,33 @@ Or download from [Releases](https://github.com/palguna26/PlayGround-CLI/releases
 ## Quick Start
 
 ```bash
-# 1. Configure your API key
+# 1. Install PlayGround
+curl -fsSL https://raw.githubusercontent.com/palguna26/PlayGround-CLI/main/scripts/install.sh | sh
+
+# 2. Download local model (~4GB)
 pg setup
 
-# 2. Start interactive agent mode
+# 3. Start interactive agent mode
 pg agent
 
-# 3. Chat naturally!
+# 4. Chat naturally!
 You: Add a login endpoint with JWT authentication
 Agent: I'll create a JWT-based login system...
 ```
+
+## Requirements
+
+- **RAM**: 8GB minimum, 16GB recommended
+- **Disk**: ~5GB for model
+- **CPU**: Any modern CPU (GPU not required)
+- **OS**: Linux, macOS, Windows
+- **llama.cpp**: Installed and in PATH (see [Setup Guide](docs/SETUP.md))
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `pg setup` | Interactive API key configuration |
+| `pg setup` | Configure local model path |
 | `pg agent` | Start interactive chat mode |
 | `pg start "goal"` | Start a new session with a goal |
 | `pg ask "question"` | Ask a one-off question |
@@ -61,6 +77,9 @@ pg agent
 ║           PlayGround Agent - Interactive Mode              ║
 ╚════════════════════════════════════════════════════════════╝
 
+🤖 Model: DeepSeek-Coder-7B-Instruct-v1.5 (local)
+📁 Path: ~/.playground/models/deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf
+
 Session: pg-1
 Goal: Add authentication
 
@@ -77,19 +96,6 @@ You: review
 
 ═══ Patch 1/1 ═══
 File: models/user.go
-
---- /dev/null
-+++ models/user.go
-@@ -0,0 +1,25 @@
-+package models
-+
-+import "golang.org/x/crypto/bcrypt"
-+
-+type User struct {
-+    ID       int
-+    Email    string
-+    Password string
-+}
 ...
 
 You: apply
@@ -107,45 +113,27 @@ You: apply
 | `help` | Show commands |
 | `exit` | Save and quit |
 
-## Configuration
+## Why Local-First?
 
-### Setup Wizard (Recommended)
-
-```bash
-pg setup
-```
-
-This guides you through:
-- Choosing your LLM provider (Gemini or OpenAI)
-- Entering your API key
-- Saving configuration securely
-
-Config is stored in `~/.playground/config.json`.
-
-### Environment Variables (Alternative)
-
-```bash
-# Gemini (recommended - generous free tier)
-export GEMINI_API_KEY="your-key"
-
-# OpenAI
-export OPENAI_API_KEY="your-key"
-
-# Force specific provider
-export LLM_PROVIDER="gemini"  # or "openai"
-```
+| Feature | PlayGround (Local) | Cloud AI Tools |
+|---------|-------------------|----------------|
+| API keys required | ❌ Never | ✅ Always |
+| Internet required | ❌ Only for setup | ✅ Always |
+| Data privacy | ✅ 100% local | ❌ Sent to cloud |
+| Cost | ✅ Free forever | ❌ Pay per token |
+| Speed (after load) | ✅ Fast | ⚠️ Network dependent |
+| Auto-apply changes | ❌ Never | ⚠️ Sometimes |
 
 ## Safety Guarantees
 
 PlayGround is built with safety as the core principle:
 
-| Feature | PlayGround | Other AI Tools |
-|---------|------------|----------------|
-| Auto-apply changes | ❌ Never | ✅ Yes |
-| Show diffs before apply | ✅ Always | ❌ Sometimes |
-| Require approval | ✅ Always | ❌ No |
-| Rollback support | ✅ Full | ❌ Limited |
-| Git optional | ✅ Yes | ❌ Usually required |
+- ❌ **Never** writes files directly
+- ✅ **Always** shows diffs before applying
+- ✅ **Always** requires explicit user approval
+- ✅ **Always** deterministic and reviewable
+- ✅ **Full** rollback support
+- ✅ **Works** with or without Git
 
 ## Architecture
 
@@ -165,10 +153,10 @@ PlayGround is built with safety as the core principle:
         ┌───────────┴───────────┐
         ▼                       ▼
 ┌──────────────┐        ┌──────────────┐
-│  LLM Layer   │        │    Tools     │
-│  • OpenAI    │        │  • read_file │
-│  • Gemini    │        │  • list_files│
-│  • Streaming │        │  • git_*     │
+│  Local LLM   │        │    Tools     │
+│  DeepSeek    │        │  • read_file │
+│  Coder 7B    │        │  • list_files│
+│  (llama.cpp) │        │  • git_*     │
 └──────────────┘        │  • patches   │
                         └──────────────┘
                               │
@@ -178,12 +166,6 @@ PlayGround is built with safety as the core principle:
 │   • Snapshot Mode (SHA-based)           │
 └─────────────────────────────────────────┘
 ```
-
-## Requirements
-
-- **API Key**: Gemini (free) or OpenAI (paid)
-- **OS**: Linux, macOS, Windows
-- **Git**: Optional (uses snapshots if not available)
 
 ## Building from Source
 
@@ -196,31 +178,44 @@ sudo mv pg /usr/local/bin/
 
 ## Troubleshooting
 
-### "Rate limit error (429)"
-
-You've hit the API rate limit. Options:
-- Wait 1-2 minutes and retry
-- Switch providers: `pg setup`
-- Use a paid API tier
-
-### "pg: command not found"
-
-Add the install directory to your PATH:
-
-```bash
-# Linux/macOS
-export PATH="$PATH:$HOME/.local/bin"
-
-# Windows PowerShell
-$env:Path += ";$env:USERPROFILE\.local\bin"
-```
-
-### "No LLM API key found"
+### "No model configured"
 
 Run the setup wizard:
 ```bash
 pg setup
 ```
+
+### "llama-cli: command not found"
+
+Install llama.cpp:
+```bash
+# macOS
+brew install llama.cpp
+
+# Linux
+# See: https://github.com/ggerganov/llama.cpp
+
+# Windows
+# Download from: https://github.com/ggerganov/llama.cpp/releases
+```
+
+### Slow inference
+
+- Ensure you have 8GB+ RAM
+- Close other applications
+- Consider using Q3_K_M quantization for faster inference
+
+### Out of memory
+
+- Close other applications
+- Use a smaller quantization (Q3_K_M instead of Q4_K_M)
+- Reduce context size in config
+
+---
+
+## Migration from v1.x
+
+See [MIGRATION.md](MIGRATION.md) for upgrading from cloud-based versions.
 
 ## License
 
@@ -232,6 +227,6 @@ Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details
 
 ---
 
-**PlayGround CLI** - AI-assisted development, safely.
+**PlayGround CLI** - AI-assisted development, locally and safely.
 
 *For more help, see the [User Guide](docs/USER_GUIDE.md) or [open an issue](https://github.com/palguna26/PlayGround-CLI/issues).*

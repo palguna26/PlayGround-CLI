@@ -115,13 +115,25 @@ In agent mode, you can:
 			store.SetActiveSessionID(sessionID)
 		}
 
-		// Create LLM provider
-		provider, err := llm.NewProvider()
-		if err != nil {
-			return fmt.Errorf("failed to create LLM provider: %w", err)
+		// Load config to get model path
+		config, err := LoadConfig()
+		if err != nil || config == nil || config.ModelPath == "" {
+			return fmt.Errorf("no model configured. Run: pg setup")
 		}
 
-		fmt.Printf("Using LLM provider: %s\n", provider.Name())
+		// Create local LLM provider
+		provider, err := llm.NewLocalProvider(config.ModelPath)
+		if err != nil {
+			return fmt.Errorf("failed to load local model: %w", err)
+		}
+
+		fmt.Println("╔════════════════════════════════════════════════════════════╗")
+		fmt.Println("║           PlayGround Agent - Interactive Mode              ║")
+		fmt.Println("╚════════════════════════════════════════════════════════════╝")
+		fmt.Println()
+		fmt.Printf("🤖 Model: %s\n", provider.Name())
+		fmt.Printf("📁 Path: %s\n", config.ModelPath)
+		fmt.Println()
 
 		// Create agent with agent mode prompt
 		agentInstance := &agent.Agent{

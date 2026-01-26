@@ -13,16 +13,18 @@ import (
 
 // Config represents the PlayGround configuration
 type Config struct {
-	GeminiAPIKey string `json:"gemini_api_key,omitempty"`
-	OpenAIAPIKey string `json:"openai_api_key,omitempty"`
-	LLMProvider  string `json:"llm_provider,omitempty"` // "openai" or "gemini"
+	ModelPath string `json:"model_path,omitempty"` // Path to local GGUF model
 }
 
 var setupCmd = &cobra.Command{
 	Use:   "setup",
-	Short: "Interactive setup wizard for PlayGround",
-	Long: `Configure PlayGround with your API keys and preferences.
-This creates a config file in your home directory that persists across sessions.
+	Short: "Configure local model for PlayGround",
+	Long: `Set up PlayGround with a local DeepSeek-Coder model.
+
+This wizard will help you:
+  1. Specify the path to your local GGUF model
+  2. Validate the model file exists
+  3. Check system requirements (RAM)
 
 Example:
   pg setup`,
@@ -30,7 +32,7 @@ Example:
 		reader := bufio.NewReader(os.Stdin)
 
 		fmt.Println("╔════════════════════════════════════════╗")
-		fmt.Println("║   PlayGround CLI - Setup Wizard       ║")
+		fmt.Println("║   PlayGround CLI - Local Model Setup  ║")
 		fmt.Println("╚════════════════════════════════════════╝")
 		fmt.Println()
 
@@ -41,96 +43,84 @@ Example:
 		}
 
 		// Display current configuration
-		if config.GeminiAPIKey != "" || config.OpenAIAPIKey != "" {
+		if config.ModelPath != "" {
 			fmt.Println("📋 Current Configuration:")
-			if config.GeminiAPIKey != "" {
-				fmt.Printf("  • Gemini API Key: %s\n", maskAPIKey(config.GeminiAPIKey))
-			}
-			if config.OpenAIAPIKey != "" {
-				fmt.Printf("  • OpenAI API Key: %s\n", maskAPIKey(config.OpenAIAPIKey))
-			}
-			if config.LLMProvider != "" {
-				fmt.Printf("  • Preferred Provider: %s\n", config.LLMProvider)
-			}
+			fmt.Printf("  • Model Path: %s\n", config.ModelPath)
 			fmt.Println()
 		}
 
-		// Provider selection
-		fmt.Println("Which LLM provider would you like to use?")
-		fmt.Println("  1) Google Gemini (Recommended - generous free tier)")
-		fmt.Println("  2) OpenAI (GPT-4, GPT-3.5)")
-		fmt.Println("  3) Both (configure both, auto-select)")
-		fmt.Print("\nChoice [1-3]: ")
+		// Model path configuration
+		fmt.Println("🤖 Local Model Configuration")
+		fmt.Println()
+		fmt.Println("PlayGround uses DeepSeek-Coder-7B-Instruct v1.5 (GGUF format)")
+		fmt.Println("Recommended quantization: Q4_K_M")
+		fmt.Println()
+		
+		defaultPath := filepath.Join(getHomeDir(), ".playground", "models", "deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf")
+		fmt.Printf("Default path: %s\n", defaultPath)
+		fmt.Println()
+		
+		fmt.Print("Enter model path (or press Enter for default): ")
+		modelPath, _ := reader.ReadString('\n')
+		modelPath = strings.TrimSpace(modelPath)
 
-		choice, _ := reader.ReadString('\n')
-		choice = strings.TrimSpace(choice)
-
-		setupGemini := choice == "1" || choice == "3"
-		setupOpenAI := choice == "2" || choice == "3"
-
-		// Gemini setup
-		if setupGemini {
-			fmt.Println("\n🔹 Gemini Configuration")
-			fmt.Println("Get your API key from: https://makersuite.google.com/app/apikey")
-			fmt.Print("Enter Gemini API Key (or press Enter to skip): ")
-
-			apiKey, _ := reader.ReadString('\n')
-			apiKey = strings.TrimSpace(apiKey)
-
-			if apiKey != "" {
-				config.GeminiAPIKey = apiKey
-				fmt.Println("✓ Gemini API key saved")
-			}
+		if modelPath == "" {
+			modelPath = defaultPath
 		}
 
-		// OpenAI setup
-		if setupOpenAI {
-			fmt.Println("\n🔹 OpenAI Configuration")
-			fmt.Println("Get your API key from: https://platform.openai.com/api-keys")
-			fmt.Print("Enter OpenAI API Key (or press Enter to skip): ")
-
-			apiKey, _ := reader.ReadString('\n')
-			apiKey = strings.TrimSpace(apiKey)
-
-			if apiKey != "" {
-				config.OpenAIAPIKey = apiKey
-				fmt.Println("✓ OpenAI API key saved")
-			}
+		// Expand ~ to home directory
+		if strings.HasPrefix(modelPath, "~") {
+			modelPath = filepath.Join(getHomeDir(), modelPath[1:])
 		}
 
-		// Provider preference (if both configured)
-		if config.GeminiAPIKey != "" && config.OpenAIAPIKey != "" {
-			fmt.Println("\n🔹 Provider Preference")
-			fmt.Println("Both providers are configured. Which should be preferred?")
-			fmt.Println("  1) Gemini (faster, more generous free tier)")
-			fmt.Println("  2) OpenAI (GPT-4 capabilities)")
-			fmt.Print("\nChoice [1-2]: ")
-
-			pref, _ := reader.ReadString('\n')
-			pref = strings.TrimSpace(pref)
-
-			if pref == "2" {
-				config.LLMProvider = "openai"
-			} else {
-				config.LLMProvider = "gemini"
+		// Validate model file exists
+		if _, err := os.Stat(modelPath); os.IsNotExist(err) {
+			fmt.Println()
+			fmt.Println("⚠️  Model file not found!")
+			fmt.Println()
+			fmt.Println("To download the model:")
+			fmt.Println("  1. Visit: https://huggingface.co/TheBloke/deepseek-coder-7B-instruct-v1.5-GGUF")
+			fmt.Println("  2. Download: deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf (~4GB)")
+			fmt.Printf("  3. Save to: %s\n", modelPath)
+			fmt.Println()
+			
+			// Create models directory
+			modelsDir := filepath.Dir(modelPath)
+			if err := os.MkdirAll(modelsDir, 0755); err == nil {
+				fmt.Printf("✓ Created directory: %s\n", modelsDir)
 			}
-		} else if config.GeminiAPIKey != "" {
-			config.LLMProvider = "gemini"
-		} else if config.OpenAIAPIKey != "" {
-			config.LLMProvider = "openai"
+			
+			return fmt.Errorf("model file not found: %s", modelPath)
 		}
 
+		// Check file size (should be ~3-5GB for Q4_K_M)
+		fileInfo, _ := os.Stat(modelPath)
+		fileSizeGB := float64(fileInfo.Size()) / (1024 * 1024 * 1024)
+		
+		fmt.Println()
+		fmt.Printf("✓ Model found: %.2f GB\n", fileSizeGB)
+
+		// RAM warning
+		fmt.Println()
+		fmt.Println("💾 System Requirements:")
+		fmt.Println("  • Minimum RAM: 8 GB")
+		fmt.Println("  • Recommended: 16 GB")
+		fmt.Println("  • Model will run on CPU")
+		fmt.Println()
+		
 		// Save configuration
+		config.ModelPath = modelPath
 		if err := SaveConfig(config); err != nil {
 			return fmt.Errorf("failed to save configuration: %w", err)
 		}
 
 		// Success message
-		fmt.Println("\n✅ Configuration saved successfully!")
+		fmt.Println("✅ Configuration saved successfully!")
 		fmt.Printf("📁 Config location: %s\n", GetConfigPath())
-		fmt.Println("\n🚀 You're ready to go! Try:")
+		fmt.Println()
+		fmt.Println("🚀 You're ready to go! Try:")
+		fmt.Println("   pg agent")
 		fmt.Println("   pg start \"your goal here\"")
-		fmt.Println("   pg ask \"your question\"")
 
 		return nil
 	},
@@ -176,43 +166,14 @@ func SaveConfig(config *Config) error {
 
 // GetConfigPath returns the path to the config file
 func GetConfigPath() string {
+	return filepath.Join(getHomeDir(), ".playground", "config.json")
+}
+
+// getHomeDir returns the user's home directory
+func getHomeDir() string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		homeDir = "."
 	}
-	return filepath.Join(homeDir, ".playground", "config.json")
-}
-
-// maskAPIKey masks an API key for display
-func maskAPIKey(key string) string {
-	if len(key) <= 8 {
-		return "****"
-	}
-	return key[:4] + "****" + key[len(key)-4:]
-}
-
-// GetAPIKeys returns API keys from config file, with env var override
-func GetAPIKeys() (geminiKey, openaiKey, provider string) {
-	// First check environment variables (highest priority)
-	geminiKey = os.Getenv("GEMINI_API_KEY")
-	openaiKey = os.Getenv("OPENAI_API_KEY")
-	provider = os.Getenv("LLM_PROVIDER")
-
-	// If not in env, load from config file
-	if geminiKey == "" || openaiKey == "" || provider == "" {
-		config, err := LoadConfig()
-		if err == nil && config != nil {
-			if geminiKey == "" {
-				geminiKey = config.GeminiAPIKey
-			}
-			if openaiKey == "" {
-				openaiKey = config.OpenAIAPIKey
-			}
-			if provider == "" {
-				provider = config.LLMProvider
-			}
-		}
-	}
-
-	return
+	return homeDir
 }

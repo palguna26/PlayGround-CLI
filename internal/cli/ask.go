@@ -56,13 +56,19 @@ Example:
 			return fmt.Errorf("failed to load session: %w", err)
 		}
 
-		// Create LLM provider (auto-detects OpenAI or Gemini)
-		provider, err := llm.NewProvider()
-		if err != nil {
-			return fmt.Errorf("failed to create LLM provider: %w", err)
+		// Load config to get model path
+		config, err := LoadConfig()
+		if err != nil || config == nil || config.ModelPath == "" {
+			return fmt.Errorf("no model configured. Run: pg setup")
 		}
 
-		fmt.Printf("Using LLM provider: %s\n", provider.Name())
+		// Create local LLM provider
+		provider, err := llm.NewLocalProvider(config.ModelPath)
+		if err != nil {
+			return fmt.Errorf("failed to load local model: %w", err)
+		}
+
+		fmt.Printf("Using: %s\n", provider.Name())
 
 		// Create agent
 		agentInstance := &agent.Agent{

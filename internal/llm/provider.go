@@ -1,5 +1,7 @@
 package llm
 
+import "fmt"
+
 // Message represents a chat message
 type Message struct {
 	Role    string `json:"role"`           // "system", "user", "assistant", "tool"
@@ -37,6 +39,7 @@ type StreamChunk struct {
 }
 
 // Provider is the interface that all LLM providers must implement
+// Currently only local llama.cpp-based provider is supported
 type Provider interface {
 	// Chat sends messages to the LLM and receives a response
 	// Tools are optional - pass nil if not using tools
@@ -47,4 +50,12 @@ type Provider interface {
 
 	// Name returns the provider name (for logging)
 	Name() string
+}
+
+// NewProvider creates a new local provider instance
+// Loads model path from config file
+func NewProvider() (Provider, error) {
+	// This will be called from CLI - for now return error
+	// CLI code will use NewLocalProvider directly with config
+	return nil, fmt.Errorf("use NewLocalProvider with model path from config")
 }
