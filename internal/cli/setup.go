@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/yourusername/playground/internal/model"
 )
 
 // Config represents the PlayGround configuration
@@ -55,11 +56,11 @@ Example:
 		fmt.Println("PlayGround uses DeepSeek-Coder-7B-Instruct v1.5 (GGUF format)")
 		fmt.Println("Recommended quantization: Q4_K_M")
 		fmt.Println()
-		
+
 		defaultPath := filepath.Join(getHomeDir(), ".playground", "models", "deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf")
 		fmt.Printf("Default path: %s\n", defaultPath)
 		fmt.Println()
-		
+
 		fmt.Print("Enter model path (or press Enter for default): ")
 		modelPath, _ := reader.ReadString('\n')
 		modelPath = strings.TrimSpace(modelPath)
@@ -78,25 +79,83 @@ Example:
 			fmt.Println()
 			fmt.Println("⚠️  Model file not found!")
 			fmt.Println()
-			fmt.Println("To download the model:")
-			fmt.Println("  1. Visit: https://huggingface.co/TheBloke/deepseek-coder-7B-instruct-v1.5-GGUF")
-			fmt.Println("  2. Download: deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf (~4GB)")
-			fmt.Printf("  3. Save to: %s\n", modelPath)
+
+			// Offer automatic download
+			fmt.Println("Would you like to download the model automatically?")
+			fmt.Println("  Model: DeepSeek-Coder-7B-Instruct v1.5 (Q4_K_M)")
+			fmt.Println("  Size: ~4GB")
+			fmt.Println("  Source: HuggingFace")
 			fmt.Println()
-			
-			// Create models directory
-			modelsDir := filepath.Dir(modelPath)
-			if err := os.MkdirAll(modelsDir, 0755); err == nil {
-				fmt.Printf("✓ Created directory: %s\n", modelsDir)
+			fmt.Print("Download now? [Y/n]: ")
+
+			downloadChoice, _ := reader.ReadString('\n')
+			downloadChoice = strings.TrimSpace(strings.ToLower(downloadChoice))
+
+			if downloadChoice == "" || downloadChoice == "y" || downloadChoice == "yes" {
+				// Create models directory
+				modelsDir := filepath.Dir(modelPath)
+				if err := os.MkdirAll(modelsDir, 0755); err != nil {
+					return fmt.Errorf("failed to create models directory: %w", err)
+				}
+
+				// Import model package
+				// Note: This requires adding the import at the top of the file
+				fmt.Println()
+				fmt.Println("📥 Downloading model...")
+				fmt.Println("This may take 10-30 minutes depending on your connection.")
+				fmt.Println()
+
+				// Use the download helper
+				manager := model.NewModelManager(modelsDir)
+				downloader := model.NewDownloadHelper(manager)
+
+				// Progress callback
+				lastPercent := -1
+				progressCallback := func(downloaded, total int64) {
+					if total > 0 {
+						percent := int(float64(downloaded) / float64(total) * 100)
+						if percent != lastPercent && percent%5 == 0 {
+							fmt.Printf("Progress: %d%% (%.2f GB / %.2f GB)\n",
+								percent,
+								float64(downloaded)/(1024*1024*1024),
+								float64(total)/(1024*1024*1024))
+							lastPercent = percent
+						}
+					}
+				}
+
+				if err := downloader.DownloadDeepSeekCoder(progressCallback); err != nil {
+					fmt.Println()
+					fmt.Println("❌ Download failed:", err)
+					fmt.Println()
+					fmt.Println("Manual download instructions:")
+					fmt.Println("  1. Visit: https://huggingface.co/TheBloke/deepseek-coder-7B-instruct-v1.5-GGUF")
+					fmt.Println("  2. Download: deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf (~4GB)")
+					fmt.Printf("  3. Save to: %s\n", modelPath)
+					fmt.Println()
+					return fmt.Errorf("model download failed")
+				}
+
+				// Update modelPath to the downloaded file
+				modelPath = downloader.GetRecommendedModel()
+				fmt.Println()
+				fmt.Println("✅ Model downloaded successfully!")
+			} else {
+				fmt.Println()
+				fmt.Println("Manual download instructions:")
+				fmt.Println("  1. Visit: https://huggingface.co/TheBloke/deepseek-coder-7B-instruct-v1.5-GGUF")
+				fmt.Println("  2. Download: deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf (~4GB)")
+				fmt.Printf("  3. Save to: %s\n", modelPath)
+				fmt.Println()
+				fmt.Println("Then run 'pg setup' again.")
+				return fmt.Errorf("model file not found: %s", modelPath)
 			}
-			
-			return fmt.Errorf("model file not found: %s", modelPath)
 		}
 
 		// Check file size (should be ~3-5GB for Q4_K_M)
 		fileInfo, _ := os.Stat(modelPath)
 		fileSizeGB := float64(fileInfo.Size()) / (1024 * 1024 * 1024)
-		
+
 		fmt.Println()
 		fmt.Printf("✓ Model found: %.2f GB\n", fileSizeGB)
 
@@ -107,7 +166,7 @@ Example:
 		fmt.Println("  • Recommended: 16 GB")
 		fmt.Println("  • Model will run on CPU")
 		fmt.Println()
-		
+
 		// Save configuration
 		config.ModelPath = modelPath
 		if err := SaveConfig(config); err != nil {
