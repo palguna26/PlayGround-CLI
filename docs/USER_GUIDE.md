@@ -14,40 +14,32 @@
 
 ## Installation
 
-### One-Line Install (Recommended)
+### Quick Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/palguna26/PlayGround-CLI/main/scripts/install.sh | sh
 ```
 
-### Windows (PowerShell)
+### Requirements
 
-```powershell
-# After running the curl installer above, add to PATH:
-$env:Path += ";$env:USERPROFILE\.local\bin"
+- **llama.cpp**: Install from [llama.cpp](https://github.com/ggerganov/llama.cpp)
+- **Model**: DeepSeek-Coder-7B-Instruct v1.5 (~4GB)
+- **RAM**: 8GB minimum, 16GB recommended
+- **Disk**: ~5GB for model
 
-# Make permanent:
-[Environment]::SetEnvironmentVariable("Path", "$env:Path;$env:USERPROFILE\.local\bin", "User")
-```
-
-### Verify Installation
-
-```bash
-pg --version
-# Output: pg version 0.1.0
-```
+See [SETUP.md](SETUP.md) for detailed installation instructions.
 
 ---
 
 ## Quick Start
 
-### 1. Configure API Key
+### 1. Configure Local Model
 
 ```bash
 pg setup
 ```
 
-Follow the wizard to enter your Gemini or OpenAI API key.
+Follow the wizard to download or configure your model path.
 
 ### 2. Start Agent Mode
 
@@ -85,8 +77,8 @@ pg agent --resume pg-5      # Resume previous session
 
 ### In-Chat Commands
 
-| Command | Description |
-|---------|-------------|
+| Command | Action |
+|---------|--------|
 | `review` | Display all pending patches as diffs |
 | `apply` | Apply pending patches (with confirmation) |
 | `status` | Show session information |
@@ -96,6 +88,16 @@ pg agent --resume pg-5      # Resume previous session
 ### Example Session
 
 ```
+╔════════════════════════════════════════════════════════════╗
+║           PlayGround Agent - Interactive Mode              ║
+╚════════════════════════════════════════════════════════════╝
+
+🤖 Model: DeepSeek-Coder-7B-Instruct-v1.5 (local)
+📁 Path: ~/.playground/models/deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf
+
+Session: pg-1
+Goal: Add authentication
+
 You: Create a config file parser for YAML
 
 Agent: I'll create a YAML config parser. Let me check if you have 
@@ -131,14 +133,14 @@ You: apply
 
 ### `pg setup`
 
-Interactive configuration wizard.
+Configure local model path.
 
 ```bash
 pg setup
 ```
 
-- Configures API keys for Gemini/OpenAI
-- Sets preferred provider
+- Downloads or configures model
+- Validates model file
 - Saves to `~/.playground/config.json`
 
 ### `pg agent`
@@ -211,27 +213,17 @@ pg resume pg-3
 
 ```json
 {
-  "gemini_api_key": "AIza...",
-  "openai_api_key": "sk-...",
-  "llm_provider": "gemini"
+  "model_path": "/path/to/deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf"
 }
 ```
 
-### Environment Variables
+### Changing Model
 
-Environment variables override config file settings:
+Run `pg setup` again to reconfigure:
 
 ```bash
-export GEMINI_API_KEY="your-key"
-export OPENAI_API_KEY="your-key"
-export LLM_PROVIDER="gemini"  # or "openai"
+pg setup
 ```
-
-### Provider Priority
-
-1. `LLM_PROVIDER` environment variable (if set)
-2. Config file `llm_provider` setting
-3. Auto-detect: Gemini preferred if both keys present
 
 ---
 
@@ -284,22 +276,19 @@ You: apply
 
 ## Troubleshooting
 
-### Rate Limit Errors (429)
+### "llama-cli: command not found"
 
-**Cause**: API rate limit exceeded.
+**Cause**: llama.cpp not installed or not in PATH.
 
-**Solutions**:
-1. Wait 1-2 minutes and retry
-2. Switch to a different provider
-3. Upgrade to a paid API tier
-
+**Solution**: Install llama.cpp:
 ```bash
-# Switch provider temporarily
-export LLM_PROVIDER="openai"
-pg agent
+# macOS
+brew install llama.cpp
+
+# Linux - see https://github.com/ggerganov/llama.cpp
 ```
 
-### "No LLM API key found"
+### "No model configured"
 
 **Solution**: Run the setup wizard.
 
@@ -307,19 +296,19 @@ pg agent
 pg setup
 ```
 
-### "pg: command not found"
+### Slow inference (> 10 seconds)
 
-**Solution**: Add install directory to PATH.
+**Solutions**:
+1. Close other applications to free RAM
+2. Use Q3_K_M quantization for faster inference
+3. Ensure 8GB+ RAM available
 
-```bash
-# Linux/macOS
-echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
-source ~/.bashrc
+### Out of memory
 
-# Windows PowerShell
-[Environment]::SetEnvironmentVariable("Path", "$env:Path;$env:USERPROFILE\.local\bin", "User")
-# Restart terminal
-```
+**Solutions**:
+- Close other applications
+- Use Q3_K_M quantization (smaller model)
+- Upgrade to 16GB RAM
 
 ### Session Not Found
 
@@ -350,6 +339,17 @@ pg apply    # Apply them
 
 ---
 
+## Privacy & Offline Operation
+
+PlayGround runs **100% locally**:
+
+- ✅ No data sent to cloud
+- ✅ Works completely offline (after setup)
+- ✅ No telemetry or tracking
+- ✅ Your code stays on your machine
+
+---
+
 ## Getting Help
 
 - **In-agent help**: Type `help` in agent mode
@@ -358,4 +358,4 @@ pg apply    # Apply them
 
 ---
 
-*PlayGround CLI - AI-assisted development, safely.*
+*PlayGround CLI - AI-assisted development, locally and safely.*
