@@ -64,18 +64,26 @@ Or download from [GitHub Releases](https://github.com/palguna26/PlayGround-CLI/r
 
 ## Step 3: Download the Model
 
-### Option 1: Automatic Download (Recommended)
+### Automatic Download (Recommended)
+
+Simply run:
 
 ```bash
 pg setup
 ```
 
-Follow the prompts:
-1. Choose to download the model automatically
-2. Wait for download (~4GB, may take 10-30 minutes)
-3. Model will be saved to `~/.playground/models/`
+The wizard will:
+1. Detect if the model is missing
+2. **Offer to download it automatically** (~4GB)
+3. Show progress during download
+4. Validate the downloaded model
+5. Save the configuration
 
-### Option 2: Manual Download
+**That's it!** The setup wizard handles everything.
+
+### Manual Download (Alternative)
+
+If you prefer to download manually or automatic download fails:
 
 1. Visit [TheBloke/deepseek-coder-7B-instruct-v1.5-GGUF](https://huggingface.co/TheBloke/deepseek-coder-7B-instruct-v1.5-GGUF)
 2. Download `deepseek-coder-7b-instruct-v1.5.Q4_K_M.gguf` (~4GB)

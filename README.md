@@ -32,7 +32,7 @@ pg setup
 # 1. Install PlayGround
 curl -fsSL https://raw.githubusercontent.com/palguna26/PlayGround-CLI/main/scripts/install.sh | sh
 
-# 2. Download local model (~4GB)
+# 2. Setup (downloads model automatically)
 pg setup
 
 # 3. Start interactive agent mode
