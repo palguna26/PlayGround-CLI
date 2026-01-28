@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -14,6 +16,8 @@ import (
 type LocalProvider struct {
 	modelPath   string
 	contextSize int
+	debugMode   bool
+	logDir      string
 }
 
 // NewLocalProvider creates a new local LLM provider
@@ -22,9 +26,21 @@ func NewLocalProvider(modelPath string) (*LocalProvider, error) {
 		return nil, fmt.Errorf("model path is required")
 	}
 
+	// Check for debug mode
+	debugMode := os.Getenv("PG_DEBUG") == "1"
+
+	// Set up log directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		homeDir = "."
+	}
+	logDir := filepath.Join(homeDir, ".playground", "logs")
+
 	return &LocalProvider{
 		modelPath:   modelPath,
 		contextSize: 4096,
+		debugMode:   debugMode,
+		logDir:      logDir,
 	}, nil
 }
 
@@ -221,4 +237,98 @@ func (p *LocalProvider) extractToolCalls(response string) []ToolCall {
 	}
 
 	return toolCalls
+}
+
+// logToFile writes content to a log file if debug mode is enabled
+func (p *LocalProvider) logToFile(filename, content string) error {
+	if !p.debugMode {
+		return nil // Silent in production
+	}
+
+	// Create log directory if it doesn't exist
+	if err := os.MkdirAll(p.logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
+	}
+
+	logPath := filepath.Join(p.logDir, filename)
+
+	// Append timestamp
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	logContent := fmt.Sprintf("=== %s ===\n%s\n\n", timestamp, content)
+
+	// Append to file
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open log file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(logContent); err != nil {
+		return fmt.Errorf("failed to write to log file: %w", err)
+	}
+
+	return nil
+}
+
+// ChatSilent is like Chat but suppresses all output in production mode
+// In debug mode (PG_DEBUG=1), logs are written to ~/.playground/logs/
+func (p *LocalProvider) ChatSilent(messages []Message, tools []Tool, logName string) (*Response, error) {
+	// Build prompt
+	prompt := p.buildPrompt(messages, tools)
+
+	// Log prompt in debug mode
+	if err := p.logToFile(logName+"_prompt.txt", prompt); err != nil {
+		// Don't fail on logging errors, just continue
+		fmt.Fprintf(os.Stderr, "Warning: failed to log prompt: %v\n", err)
+	}
+
+	// Call llama.cpp CLI
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "llama-cli",
+		"--model", p.modelPath,
+		"--prompt", prompt,
+		"--ctx-size", fmt.Sprintf("%d", p.contextSize),
+		"--n-predict", "2048",
+		"--temp", "0.1",
+		"--top-k", "40",
+		"--top-p", "0.9",
+		"--threads", "4",
+		"--no-display-prompt",
+		"--log-disable", // Disable llama.cpp's own logging
+	)
+
+	// Capture output
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// Run command
+	if err := cmd.Run(); err != nil {
+		// Log error in debug mode
+		errorMsg := fmt.Sprintf("Command failed: %v\nStderr: %s", err, stderr.String())
+		p.logToFile(logName+"_error.txt", errorMsg)
+		return nil, fmt.Errorf("llama-cli failed: %w", err)
+	}
+
+	output := stdout.String()
+
+	// Log output in debug mode
+	if err := p.logToFile(logName+"_output.txt", output); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to log output: %v\n", err)
+	}
+
+	// Log stderr in debug mode (even if command succeeded)
+	if stderr.Len() > 0 {
+		p.logToFile("llama.log", stderr.String())
+	}
+
+	// Parse tool calls
+	toolCalls := p.extractToolCalls(output)
+
+	return &Response{
+		Content:   output,
+		ToolCalls: toolCalls,
+	}, nil
 }
